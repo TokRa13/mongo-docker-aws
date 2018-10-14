@@ -1,0 +1,15 @@
+---
+# vars file for mongo-aws
+vpc: vpc-bc5ae3d9
+ami: ami-9887c6e7  # (Base AMI with Centos 7)
+aws_region: us-east-1
+aws_az:
+  az1: us-east-1a
+  az2: us-east-1b
+  az3: us-east-1c
+aws_subnet:
+  subnet1: subnet-7a01f823
+  subnet2: subnet-e4773381
+  subnet3: subnet-0b514923
+dns: test.com
+ec2_type: t2.micro

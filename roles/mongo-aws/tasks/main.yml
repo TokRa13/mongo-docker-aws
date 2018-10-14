@@ -1,0 +1,107 @@
+---
+# tasks file for mongo-aws
+- name: create key pair
+  ec2_key:
+    name: aws_mongo
+    wait: "yes"
+  register: ec2_key
+
+- name: Save private key
+  copy: content="{{ ec2_key.key.private_key }}" dest="./aws_mongo.pem" mode=0600
+  when: ec2_key.changed
+
+- name: create a security group
+  ec2_group:
+    name: mongo
+    description: MongoDB group
+    region: "{{ aws_region }}"
+    vpc_id: "{{ vpc }}"
+    rules:
+      - proto: tcp
+        ports: 27017-27019
+        cidr_ip: 0.0.0.0/0
+        rule_desc: MongoDB default ports
+      - proto: tcp
+        ports: 22
+        cidr_ip: 178.165.122.165/32
+        rule_desc: ssh default ports
+  register: aws_sg
+
+- name: provision instances
+  ec2:
+    key_name: aws_mongo
+    region: "{{ aws_region }}"
+    group: mongo
+    instance_type: "{{ ec2_type }}"
+    image: "{{ ami }}"
+    volumes:
+      - device_name: /dev/sda1
+        volume_type: gp2
+        volume_size: 8
+        delete_on_termination: true
+      - device_name: /dev/sdb
+        volume_size: 1000
+        delete_on_termination: true
+    assign_public_ip: "yes"
+    vpc_subnet_id: "{{ item.vpc_subnet_id }}"
+    zone: "{{ item.zone }}"
+    wait: true
+    exact_count: 1  # per availability zone
+    count_tag:
+      Name: MongoDB
+    instance_tags:
+      Name: MongoDB
+  loop:
+    - {vpc_subnet_id: "{{ aws_subnet.subnet1 }}", zone: "{{ aws_az.az1 }}"}
+    - {vpc_subnet_id: "{{ aws_subnet.subnet2 }}", zone: "{{ aws_az.az2 }}"}
+    - {vpc_subnet_id: "{{ aws_subnet.subnet3 }}", zone: "{{ aws_az.az3 }}"}
+  register: ec2
+
+# - debug:
+#     var: ec2.results.instances.0.public_ip
+
+# - debug:
+#     var: "{{ item.instances.0.public_ip }}"
+#   with_items: "{{ ec2.results }}"
+#   register: fuck
+
+# - name: add all instance public IPs to host group
+#   add_host:
+#     hostname: "{{ item.instances.0.public_ip }}"
+#     groups: ec2hosts
+#   # with_subelements:
+#   #   - ec2.results
+#   #   - instances
+#   loop: "{{ ec2.results }}"
+
+# - include_tasks: config.yml
+#   static: "no"
+
+# - name: Configure instances
+#   # hosts: ec2hosts
+#   # become: true
+#   # gather_facts: true
+#   mount:
+#     path: /mnt/mongo
+#     src: /dev/sdb1
+#     fstype: xfs
+#     # opts: noatime
+#     state: mounted
+
+
+# - name: attach volumes
+#   ec2_vol:
+#     instance: "{{ item.id }}"
+#     volume_size: 1000
+#   with_items: "{{ ec2.instances }}"
+#   register: ec2_vol
+
+# - route53:
+#     state: present
+#     zone: "{{ dns }}"
+#     record: "{{ dns }}"
+#     type: A
+#     ttl: 7200
+#     value: "{{ item.public_ip }}"
+#     wait: "yes"
+#     loop: "{{ ec2.instances }}"

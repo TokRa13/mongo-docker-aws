@@ -1,0 +1,15 @@
+---
+# default variables for mongo-aws
+vpc: vpc-123456789
+ami: ami-0987654
+aws_region: us-east-1
+az:
+  az1: us-east-1a
+  az2: us-east-1b
+  az3: us-east-1c
+subnet:
+  subnet1: subnet-123
+  subnet2: subnet-456
+  subnet3: subnet-789
+dns: test.com
+ec2_type: t2.micro
